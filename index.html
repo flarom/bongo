@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Bongo</title>
+
+        <style>
+            body {
+                margin: 0;
+            }
+
+            #bongo {
+                width: 100vw;
+                height: 100vh;
+                background: #111;
+                cursor: crosshair
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bongo"></div>
+
+        <script>
+            const bongo = document.getElementById("bongo");
+
+            const soundPath = "sounds/";
+            const activeSetPath = "tr808/";
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            const sounds = {
+                kick: "kick.wav",
+                snare: "snare.wav",
+                hat: "hat.wav",
+                ohat: "ohat.wav",
+                cymbal: "cymbal.wav",
+                cowbell: "cowbell.wav",
+            };
+
+            let spacePressed = false;
+
+            const buffers = {};
+
+            async function loadSound(name) {
+                const response = await fetch(soundPath + activeSetPath + sounds[name]);
+                const arrayBuffer = await response.arrayBuffer();
+                buffers[name] = await audioContext.decodeAudioData(arrayBuffer);
+            }
+
+            async function loadAllSounds() {
+                await Promise.all(Object.keys(sounds).map(loadSound));
+            }
+
+            function playSound(name, pitch = 1.0) {
+                const buffer = buffers[name];
+                if (!buffer) return;
+
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.playbackRate.value = pitch;
+
+                source.connect(audioContext.destination);
+                source.start(0);
+            }
+
+            bongo.addEventListener("mousedown", (event) => {
+                const y = event.clientY / window.innerHeight;
+                const pitch = 1.5 - y;
+
+                if (event.button === 0) {
+                    playSound("kick", pitch);
+                } else if (event.button === 2) {
+                    playSound("snare", pitch);
+                }
+            });
+
+            bongo.addEventListener("contextmenu", (e) => e.preventDefault());
+
+            document.addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    spacePressed = true;
+                } else if (e.code === "KeyR") {
+                    if (spacePressed) {
+                        playSound("ohat");
+                    } else {
+                        playSound("hat");
+                    }
+                } else if (e.code === "KeyE") {
+                    playSound('cymbal');
+                } else if (e.code === "KeyQ") {
+                    playSound('cowbell');
+                }
+            });
+
+            document.addEventListener("keyup", (e) => {
+                if (e.code === "Space") {
+                    spacePressed = false;
+                }
+            });
+
+            loadAllSounds().then(() => {
+                console.log("Sons carregados!");
+            });
+        </script>
+    </body>
+</html>
